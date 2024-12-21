@@ -1,6 +1,7 @@
 {
   "name": "data_estado",
   "version": "1.0.0",
+  "type": "module",
   "description": "Información de los gabinetes de gobiernos chilenos.",
   "main": "src/index.js",
   "scripts": {

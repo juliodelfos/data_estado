@@ -1,24 +1,25 @@
 import { supabase } from '../db/supabaseClient.js';
 
+// 1) Devuelve TODOS los ministerios de la versión
 export const getAllMinisterios = async (req, res) => {
   try {
-    // Ejemplo: obtienes la versión de la URL (ej. /api/vX/)
-    const { versionParam } = req.params; // "v0", "v1.0", etc.
+    const { versionParam } = req.params;  // "v0", "v1.0", etc.
     const versionNumber = versionParam.replace('v', ''); // "0", "1.0"
 
-    // 1) Buscar en la tabla versiones para obtener versionId
-    const { data: versionRows, error: versionError } = await supabase
+    // Buscar la versión en la tabla "versiones"
+    const { data: versionRow, error: versionError } = await supabase
       .from('versiones')
       .select('id, numero_version')
       .eq('numero_version', versionNumber)
       .single();
 
-    if (versionError || !versionRows) {
+    if (versionError || !versionRow) {
       return res.status(404).json({ error: 'Versión no encontrada' });
     }
-    const versionId = versionRows.id;
+    const versionId = versionRow.id;
 
-    // 2) Ejemplo: traer todos los ministerios
+    // LÓGICA para traer TODOS los ministerios y armar el JSON...
+    // (ejemplo abreviado)
     const { data: ministerios, error: minError } = await supabase
       .from('ministerios')
       .select('*')
@@ -28,112 +29,170 @@ export const getAllMinisterios = async (req, res) => {
       return res.status(500).json({ error: minError.message });
     }
 
-    // 3) Para cada ministerio, armar el JSON: { orden, nombre, web, titular, subsecretarias[] }
-    //    HARDCODE: Lógica de consultas a cargos, personas, etc.
-    //    Por simplicidad, te muestro un pseudo-ejemplo:
-
+    // Construir la respuesta final con sus subsecretarias y titulares
+    // ...
     const result = [];
     for (let m of ministerios) {
-      // (A) Buscar titular del ministerio en la versión actual
-      const { data: cargoMin, error: cargoMinErr } = await supabase
-        .from('cargos')
-        .select(`
-          nombre_cargo,
-          fecha_inicio,
-          fecha_fin,
-          persona_id (
-            nombres,
-            apellidos,
-            fecha_nacimiento,
-            profesion,
-            universidad,
-            genero,
-            partido_politico_id ( nombre )
-          )
-        `)
-        .match({ version_id: versionId, ministerio_id: m.id })
-        .eq('subsecretaria_id', null)
-        .maybeSingle(); // puede ser single o multiple
-
-      // (B) Tomar subsecretarias
-      const { data: subs, error: subsErr } = await supabase
-        .from('subsecretarias')
-        .select(`
-          id,
-          nombre,
-          sitio_web
-        `)
-        .eq('ministerio_id', m.id);
-
-      // Para cada subsecretaría, buscar su titular
-      const subsecretarias = [];
-      if (!subsErr && subs.length > 0) {
-        for (let sub of subs) {
-          const { data: cargoSub, error: cargoSubErr } = await supabase
-            .from('cargos')
-            .select(`
-              nombre_cargo,
-              fecha_inicio,
-              fecha_fin,
-              persona_id (
-                nombres,
-                apellidos,
-                fecha_nacimiento,
-                profesion,
-                universidad,
-                genero,
-                partido_politico_id ( nombre )
-              )
-            `)
-            .match({ version_id: versionId, subsecretaria_id: sub.id })
-            .maybeSingle();
-
-          subsecretarias.push({
-            subsecretaria: sub.nombre,
-            web: sub.sitio_web,
-            titular: cargoSub
-              ? {
-                  nombres: cargoSub.persona_id.nombres,
-                  apellidos: cargoSub.persona_id.apellidos,
-                  cargo: cargoSub.nombre_cargo,
-                  nacimiento: cargoSub.persona_id.fecha_nacimiento,
-                  profesion: cargoSub.persona_id.profesion,
-                  universidad: cargoSub.persona_id.universidad,
-                  partido: cargoSub.persona_id.partido_politico_id?.nombre || '',
-                  genero: cargoSub.persona_id.genero,
-                  asume: cargoSub.fecha_inicio,
-                  finaliza: cargoSub.fecha_fin
-                }
-              : null
-          });
-        }
-      }
-
-      // Armar el objeto final
-      result.push({
-        orden: m.orden,
-        nombre: m.nombre,
-        web: m.sitio_web,
-        titular: cargoMin
-          ? {
-              nombres: cargoMin.persona_id.nombres,
-              apellidos: cargoMin.persona_id.apellidos,
-              cargo: cargoMin.nombre_cargo,
-              nacimiento: cargoMin.persona_id.fecha_nacimiento,
-              profesion: cargoMin.persona_id.profesion,
-              universidad: cargoMin.persona_id.universidad,
-              partido: cargoMin.persona_id.partido_politico_id?.nombre || '',
-              genero: cargoMin.persona_id.genero,
-              asume: cargoMin.fecha_inicio,
-              finaliza: cargoMin.fecha_fin
-            }
-          : null,
-        subsecretarias
-      });
+      // Haz tus queries a 'cargos', 'subsecretarias', etc...
+      // ...
+      result.push({ /* Estructura final */ });
     }
 
-    // 4) Retornar
     return res.json(result);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Error interno' });
+  }
+};
+
+// 2) Devuelve SOLO un ministerio en la versión
+export const getMinisterioEspecifico = async (req, res) => {
+  try {
+    const { versionParam, slugMinisterio } = req.params;
+    const versionNumber = versionParam.replace('v', ''); // "0", "1.0", etc.
+
+    // 1) Obtener la versión de la tabla "versiones"
+    const { data: versionRow, error: versionError } = await supabase
+      .from('versiones')
+      .select('id, numero_version')
+      .eq('numero_version', versionNumber)
+      .single();
+
+    if (versionError || !versionRow) {
+      return res.status(404).json({ error: 'Versión no encontrada' });
+    }
+    const versionId = versionRow.id;
+
+    // 2) Obtener el ministerio por "slug"
+    const { data: ministerioRow, error: ministerioError } = await supabase
+      .from('ministerios')
+      .select('*')
+      .eq('slug', slugMinisterio)
+      .maybeSingle();
+
+    if (ministerioError || !ministerioRow) {
+      return res.status(404).json({ error: `Ministerio '${slugMinisterio}' no encontrado` });
+    }
+    const ministerioId = ministerioRow.id;
+
+    // 3) Buscar el cargo de "Ministro" (o titular) en la tabla "cargos", filtrando:
+    //    - version_id = versionId
+    //    - ministerio_id = ministerioId
+    //    - subsecretaria_id = null (ya que es el ministro, no un subsecretario)
+    //    - Asumiendo que en tu DB, "persona_id" es la referencia a "personas"
+    //      y que "personas" tiene campos como "nombres, apellidos, fecha_nacimiento, ..." 
+    //      y "personas.partido_politico_id" relaciona con "partidos_politicos(nombre)".
+    
+    const { data: cargoMin, error: cargoMinErr } = await supabase
+      .from('cargos')
+      .select(`
+        nombre_cargo,
+        fecha_inicio,
+        fecha_fin,
+        persona_id (
+          nombres,
+          apellidos,
+          fecha_nacimiento,
+          profesion,
+          universidad,
+          genero,
+          partido_politico_id ( nombre )
+        )
+      `)
+      .match({ version_id: versionId, ministerio_id: ministerioId })
+      .eq('subsecretaria_id', null)
+      .maybeSingle(); // si solo hay un ministro/a en esa versión
+
+    let titular = {};
+    if (cargoMin) {
+      // cargoMin.persona_id es un objeto con la info de la persona
+      titular = {
+        nombres: cargoMin.persona_id.nombres,
+        apellidos: cargoMin.persona_id.apellidos,
+        cargo: cargoMin.nombre_cargo,
+        nacimiento: cargoMin.persona_id.fecha_nacimiento,
+        profesion: cargoMin.persona_id.profesion,
+        universidad: cargoMin.persona_id.universidad,
+        partido: cargoMin.persona_id.partido_politico_id?.nombre || '', 
+        genero: cargoMin.persona_id.genero,
+        asume: cargoMin.fecha_inicio,
+        finaliza: cargoMin.fecha_fin
+      };
+    }
+
+    // 4) Buscar las subsecretarías de ese ministerio
+    const { data: subsRows, error: subsErr } = await supabase
+      .from('subsecretarias')
+      .select(`id, nombre, sitio_web`)
+      .eq('ministerio_id', ministerioId);
+
+    if (subsErr) {
+      // Opcionalmente, manejar error
+      console.error(subsErr);
+    }
+
+    // 5) Para cada subsecretaría, buscar su "cargo" en la tabla "cargos"
+    //    version_id = versionId, subsecretaria_id = ...
+    //    Luego construimos un array subsecretarias: [...]
+    let subsecretarias = [];
+    if (subsRows && subsRows.length > 0) {
+      for (let sub of subsRows) {
+        // Cargo de esa subsecretaría
+        const { data: cargoSub, error: cargoSubErr } = await supabase
+          .from('cargos')
+          .select(`
+            nombre_cargo,
+            fecha_inicio,
+            fecha_fin,
+            persona_id (
+              nombres,
+              apellidos,
+              fecha_nacimiento,
+              profesion,
+              universidad,
+              genero,
+              partido_politico_id ( nombre )
+            )
+          `)
+          .match({ version_id: versionId, subsecretaria_id: sub.id })
+          .maybeSingle();
+
+        let titularSub = {};
+        if (cargoSub) {
+          titularSub = {
+            nombres: cargoSub.persona_id.nombres,
+            apellidos: cargoSub.persona_id.apellidos,
+            cargo: cargoSub.nombre_cargo,
+            nacimiento: cargoSub.persona_id.fecha_nacimiento,
+            profesion: cargoSub.persona_id.profesion,
+            universidad: cargoSub.persona_id.universidad,
+            partido: cargoSub.persona_id.partido_politico_id?.nombre || '',
+            genero: cargoSub.persona_id.genero,
+            asume: cargoSub.fecha_inicio,
+            finaliza: cargoSub.fecha_fin
+          };
+        }
+
+        subsecretarias.push({
+          subsecretaria: sub.nombre,
+          web: sub.sitio_web,
+          titular: titularSub
+        });
+      }
+    }
+
+    // 6) Construir el objeto final
+    const response = {
+      orden: ministerioRow.orden,
+      nombre: ministerioRow.nombre,
+      web: ministerioRow.sitio_web,
+      titular,
+      subsecretarias
+    };
+
+    // 7) Retornar
+    return res.json(response);
+
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Error interno' });

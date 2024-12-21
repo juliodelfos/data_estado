@@ -1,9 +1,12 @@
 import { Router } from 'express';
-import { getAllMinisterios } from '../controllers/ministeriosController.js';
+import { getAllMinisterios, getMinisterioEspecifico } from '../controllers/ministeriosController.js';
 
 const router = Router();
 
-// Ruta para /api/:versionParam -> Ej: /api/v0 -> traer todos los ministerios
+// 1) Ruta para /api/:versionParam -> Trae todos los ministerios en esa versión.
 router.get('/:versionParam', getAllMinisterios);
+
+// 2) Ruta para /api/:versionParam/:slugMinisterio -> Trae SOLO un ministerio (por slug).
+router.get('/:versionParam/:slugMinisterio', getMinisterioEspecifico);
 
 export default router;
