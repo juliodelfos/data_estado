@@ -3,10 +3,10 @@ import { supabase } from '../db/supabaseClient.js';
 // 1) Devuelve TODOS los ministerios de la versión
 export const getAllMinisterios = async (req, res) => {
   try {
-    const { versionParam } = req.params;  // "v0", "v1.0", etc.
+    const { versionParam } = req.params; // "v0", "v1.0", etc.
     const versionNumber = versionParam.replace('v', ''); // "0", "1.0"
 
-    // Buscar la versión en la tabla "versiones"
+    // Obtener la versión de la tabla "versiones"
     const { data: versionRow, error: versionError } = await supabase
       .from('versiones')
       .select('id, numero_version')
@@ -18,32 +18,40 @@ export const getAllMinisterios = async (req, res) => {
     }
     const versionId = versionRow.id;
 
-    // LÓGICA para traer TODOS los ministerios y armar el JSON...
-    // (ejemplo abreviado)
+    // Obtener los ministerios
     const { data: ministerios, error: minError } = await supabase
       .from('ministerios')
-      .select('*')
-      .order('orden', { ascending: true });
+      .select(`
+        id,
+        nombre,
+        sitio_web,
+        subsecretarias (
+          nombre,
+          sitio_web
+        )
+      `)
+      .order('id', { ascending: true });
 
     if (minError) {
       return res.status(500).json({ error: minError.message });
     }
 
-    // Construir la respuesta final con sus subsecretarias y titulares
-    // ...
-    const result = [];
-    for (let m of ministerios) {
-      // Haz tus queries a 'cargos', 'subsecretarias', etc...
-      // ...
-      result.push({ /* Estructura final */ });
-    }
+    // Formatear la respuesta excluyendo los campos no deseados
+    const result = ministerios.map((m) => ({
+      id: m.id,
+      nombre: m.nombre,
+      sitio_web: m.sitio_web,
+      subsecretarias: m.subsecretarias || [], // Asegura que siempre sea un array
+    }));
 
+    // Retornar la respuesta final
     return res.json(result);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Error interno' });
   }
 };
+
 
 // 2) Devuelve SOLO un ministerio en la versión
 export const getMinisterioEspecifico = async (req, res) => {

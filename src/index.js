@@ -1,14 +1,14 @@
 import express from "express";
 import cors from "cors";
-import "dotenv/config";
+import ministeriosRouter from "./routes/ministerios.js";
+import "dotenv/config"; 
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// RUTA DE PRUEBA
-app.get("/api/hello", (req, res) => {
-  return res.json({ message: "Hello from /api/hello" });
-});
+// Rutas
+app.use("/api", ministeriosRouter);
 
+// Exportar como handler para Vercel
 export default app;
