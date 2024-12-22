@@ -10,4 +10,5 @@ app.use(express.json());
 // Montar /api
 app.use("/api", ministeriosRouter);
 
+// Exportar el app para Vercel
 export default app;
