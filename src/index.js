@@ -1,14 +1,14 @@
 import express from "express";
 import cors from "cors";
-import ministeriosRouter from "./routes/ministerios.js";
-import "dotenv/config"; // Carga las variables .env en process.env
+import "dotenv/config";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Montar /api
-app.use("/api", ministeriosRouter);
+// RUTA DE PRUEBA
+app.get("/api/hello", (req, res) => {
+  return res.json({ message: "Hello from /api/hello" });
+});
 
-// Exportar el app para Vercel
 export default app;
