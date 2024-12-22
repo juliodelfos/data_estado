@@ -6,21 +6,12 @@
       "use": "@vercel/node"
     },
     {
-      "src": "landing/nuxt.config.ts",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "landing/.output/public"
-      }
+      "src": "landing/index.html",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "api/index.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "landing/.output/public/$1"
-    }
+    { "src": "/api/(.*)", "dest": "/api/index.js" },
+    { "src": "/(.*)", "dest": "/landing/index.html" }
   ]
 }
