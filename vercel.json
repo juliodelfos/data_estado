@@ -2,14 +2,25 @@
   "version": 2,
   "builds": [
     {
-      "src": "src/index.js",
+      "src": "api/index.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "landing/nuxt.config.ts",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "landing/.output/public"
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "src/index.js"
+      "dest": "api/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "landing/.output/public/$1"
     }
   ]
 }
